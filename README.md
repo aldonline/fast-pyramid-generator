@@ -6,7 +6,7 @@ Deep Zoom images consist of a set of tiles created from a large original image. 
 
 There are many formats and viewers, each one with small differences in the image layout format. This particular generator conforms to the DZI ( Microsoft Deep Zoom format ). To learn more visit the [OpenZoom project Homepage](http://www.openzoom.org/).
 
-Normal Pyramid generators take one large image as input and produce the tiles and necessary folder structure. This approach is pretty simple to understand and use. However, we needed to add two features ( incremental/partial generation, low memory consumption ) that forced us to look for an alternate strategy.
+Normal Pyramid generators take one large image as input and produce the tiles and necessary folder structure. This approach is pretty simple to understand and use. However, we needed to radically improve performance and memory consumption and that forced us to look for an alternative strategy.
 
 ## Tweak 1: Pre-Tiling
 
