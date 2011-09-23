@@ -4,8 +4,7 @@
 
 Deep Zoom images consist of a set of tiles created from a large original image. This set of tiles is also often called a pyramid.
 
-( Read this article to get an idea on the math, etc. )
-TODO ( link above )
+There are many formats and viewers, each one with small differences in the image layout format. This particular generator conforms to the DZI ( Microsoft Deep Zoom format ). To learn more visit the [OpenZoom project Homepage](http://www.openzoom.org/).
 
 Normal Pyramid generators take one large image as input and produce the tiles and necessary folder structure. This approach is pretty simple to understand and use. However, we needed to add two features ( incremental/partial generation, low memory consumption ) that forced us to look for an alternate strategy.
 
@@ -23,7 +22,7 @@ While in some browsers a tile `overlap = 0` yields some visual artifacts, elimin
 
 Using `overlap >= 1` will be explored soon. It wont' change the user API and folder conventions, just make the generator a bit more complex.
 
-## Reult: Faster, cheaper generation
+## Result: Faster, cheaper generation
 
 The features referenced above ( pre-tiling, patches and no-overlap ) work together to provide a huge efficiency boost.
 
@@ -119,7 +118,7 @@ Which will yield the expected result, using links to previously generated images
 
 # Random Notes
 
-* All the *source* data is located in the `./src/` folder. You can delete everything else and regenerate from here.
+* All the *source* data is located in the `./v{x}/` folders. This, you can delete the `./dest/` folder at any time and regenerate from here.
 * Generating a version will ensure that all previous versions are present.
 * The first generation (v0) is usually the longest because it will need to generate the complete pyramid. Subsequent generations only generate the delta
 
