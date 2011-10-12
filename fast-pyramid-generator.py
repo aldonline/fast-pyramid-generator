@@ -63,7 +63,7 @@ def combine4( filenames, dest ):
   new_image.save( dest )
 
 class Pyramid(object):
-  def __init__(self, base_path, width, height, tile_size, tile_overlap, tile_format):
+  def __init__(self, base_path, width, height, tile_size, tile_format):
     self.base_path = base_path
     self.width = width
     self.height = height
@@ -309,7 +309,7 @@ def main():
   dest_path = path + '/dest'
   if os.path.exists(dest_path): shutil.rmtree( dest_path )
   # generate version zero
-  fp = Pyramid( path, image[1], image[2] , 254, 0, 'png' )
+  fp = Pyramid( path, image[1], image[2] , 254, 'png' )
   fp.generate_v0()
 
 main()
