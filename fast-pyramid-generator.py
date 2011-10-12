@@ -62,7 +62,6 @@ def combine4( filenames, dest ):
     new_image.paste( ins[0], ins[1] )
   new_image.save( dest )
 
-
 class Pyramid(object):
   def __init__(self, base_path, width, height, tile_size, tile_overlap, tile_format):
     self.base_path = base_path
@@ -72,10 +71,19 @@ class Pyramid(object):
     self.tile_overlap = tile_overlap
     self.tile_format = tile_format
     self.descriptor = deepzoom.DeepZoomImageDescriptor( width, height, tile_size, tile_overlap, tile_format )
+    self.versions = {}
   
   def generate_v0( self ):
-    v0 = Version( self, 0 )
-    v0.generate()
+    self.get_version( 0 ).generate()
+    self.get_version( 1 ).generate()
+    self.get_version( 2 ).generate()
+    self.get_version( 3 ).generate()
+
+  # lazy singleton factory
+  def get_version( self, version_number ):
+    if not version_number in self.versions:
+      self.versions[version_number] = Version( self, version_number )
+    return self.versions[version_number]
 
 class Version(object):
   def __init__(self, pyramid, version_number):
@@ -88,10 +96,10 @@ class Version(object):
     self.source_tiles_path = "%s/v%s" % ( pyramid.base_path, version_number )
     self.levels = {} # cache to hold all level objects
   
+  # lazy singleton factory
   def get_level( self, level_number ):
-    """Returns Level object or None if level is beyond top level"""
-    if level_number >= self.pyramid.descriptor.num_levels:
-      return None
+    num_levels = self.pyramid.descriptor.num_levels
+    assert level_number < num_levels, "Asking for a level number (%s) that goes beyond our calculated number of levels (%s)" % ( level_number, num_levels )
     if not level_number in self.levels:
       self.levels[level_number] = Level( self, level_number )
     return self.levels[level_number]
@@ -103,9 +111,6 @@ class Version(object):
     # save DZI xml file
     self.pyramid.descriptor.save( self.base_path + '/dzi.xml' )
     
-    # calculate the maximum level according to dimensions
-    max_level_number = self.pyramid.descriptor.num_levels - 1 # we subtract 1 because they start in 0
-    
     # create all level objects
     # ( except the last two levels which are useless )
     level_nums = range( 3, self.pyramid.descriptor.num_levels )
@@ -113,6 +118,11 @@ class Version(object):
 
     for i in level_nums:
       self.get_level( i ).generate()
+  
+  @property
+  def previous_version(self):
+    assert self.version_number > 0, 'There is no version prior to version 0'
+    return self.pyramid.get_version( self.version_number - 1)
 
 class Level(object):
   def __init__(self, version, level_number):
@@ -128,14 +138,12 @@ class Level(object):
     self.is_max_level = level_number is ( self.descriptor.num_levels - 1 )
     # Number of tiles in this level (columns, rows)
     self.num_tiles = self.descriptor.get_num_tiles( self.level_number )
-    
-    self.upper_level = version.get_level( level_number + 1 )
   
   # TODO: add a 'log' file that keeps track of progress
   # and allows us to resume
   # also, to skip the complete level when finished
   def generate( self ):
-    print "generating level %s" % self.level_number
+    print "generating level %s" % ( self.level_number )
     # create level folder
     if not os.path.exists(self.base_path): os.makedirs(self.base_path)
     # TODO: log file
@@ -143,13 +151,21 @@ class Level(object):
     # start looping and generating tiles
     for x in range( self.num_tiles[0] ):
       for y in range( self.num_tiles[1] ):
-        tile = self.get_tile( x, y )
-        tile.generate()
+        self.get_tile( x, y ).generate()
 
   def get_tile( self, x, y ):
     # Tile objects are not cached
     # ( GC considerations, as there will be millions of Tiles )
     return Tile( self, x, y )
+  
+  @property
+  def upper_level( self ):
+    assert not self.is_max_level, 'Cannot return the upper level for Level(max)'
+    return self.version.get_level( self.level_number + 1 )
+  
+  @property
+  def previous_version_of_self( self ):
+    return self.version.previous_version.get_level( self.level_number )
 
 class Tile(object):
   def __init__( self, level, x, y ):
@@ -176,14 +192,32 @@ class Tile(object):
       is_version_0 = self.version.version_number is 0
       is_version_n = self.version.version_number > 0
       
-      if is_version_0 and is_level_m:
-        # link to source tiles directly
-        # print "LINK: %s --> %s" % ( self.source_tile_image_path, self.dest_path )
-        os.symlink( self.source_tile_image_path, self.dest_path )
-      
-      elif is_version_0 and ( ls_level_m1 or is_level_n ):
-        if self.any_parent_tile_has_changed:
-          self.generate_from_parent_tiles()
+      if is_version_0:
+        # version 0 is special
+        if is_level_m:
+          # Max Level at version zero should link to source tiles directly
+          # print "LINK: %s --> %s" % ( self.source_tile_image_path, self.dest_path )
+          os.symlink( self.source_tile_image_path, self.dest_path )
+        else: # any other level
+          # any LevelN of Version 0 must generate everything
+          if self.any_parent_tile_has_changed:
+            self.generate_from_parent_tiles()
+      else: # not version zero
+        # we could explore to move some algorithms to up to 'Level'
+        # but for now we recurse over the tiles
+        if is_level_m:
+          # see if there is a new source in /vX folder
+          # if not, then link to dest/vX/levelN
+          option1 = os.path.abspath( self.version.source_tiles_path + '/' + self.filename )
+          if os.path.exists( option1 ): # there is a new source ;)
+            os.symlink( option1, self.dest_path )
+          else:
+            self.link_to_previous_version()
+        else:
+          if self.any_parent_tile_has_changed:
+            self.generate_from_parent_tiles()
+          else:
+            self.link_to_previous_version()
   
   # parent tiles are the four tiles that, when combined and resized,
   #   create this tile
@@ -203,13 +237,14 @@ class Tile(object):
   @property
   def any_parent_tile_has_changed( self ):
     for pt in self.parent_tiles:
-      if pt.has_changed_since_last_version:
-        return True
+      if pt.within_bounds: # checking for a change on an unbounded tile is not OK
+        if pt.has_changed_since_last_version:
+          return True
     return False
   
   @property
   def is_generated(self):
-    """Checks to see if we have been generated or not"""
+    assert self.within_bounds, 'It does not make sense to check if an "out of bounds" tile is_generated ' + self.dest_path
     return os.path.exists(self.dest_path)
   
   @property
@@ -241,10 +276,18 @@ class Tile(object):
     if self.level.is_max_level and self.has_source_tile_image:
       return True
     return False
+  
+  @property
+  def previous_version_of_self(self):
+    return self.level.previous_version_of_self.get_tile( self.x, self.y )
 
   def generate_from_parent_tiles(self):
     files = [ (tile.dest_path if tile.within_bounds else None ) for tile in self.parent_tiles ]
     combine4( files, self.dest_path )
+  
+  def link_to_previous_version(self):
+    os.symlink( self.previous_version_of_self.dest_path, self.dest_path )
+    
 
 
 ################################################################################
@@ -252,15 +295,21 @@ class Tile(object):
 ################################################################################
 
 def main():
-  # ./sandbox/girls_fastpyramid 1480, 940
-  # ./sandbox/galaxy_fastpyramid 5920, 6000
-  # ./sandbox/biggirls_fastpyramid 25000, 16667  
-  path = './sandbox/biggirls_fastpyramid'
+  
+  test_images = [
+    ('./sandbox/girls_fastpyramid', 1480, 940),
+    ('./sandbox/galaxy_fastpyramid', 5920, 6000),
+    ('./sandbox/biggirls_fastpyramid', 25000, 16667)
+  ]
+  
+  image = test_images[0]
+  
+  path = image[0]
   # cleanup path if already exists
   dest_path = path + '/dest'
   if os.path.exists(dest_path): shutil.rmtree( dest_path )
   # generate version zero
-  fp = Pyramid( path, 25000, 16667 , 254, 0, 'png' )
+  fp = Pyramid( path, image[1], image[2] , 254, 0, 'png' )
   fp.generate_v0()
 
 main()
