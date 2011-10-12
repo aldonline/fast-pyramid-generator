@@ -68,9 +68,8 @@ class Pyramid(object):
     self.width = width
     self.height = height
     self.tile_size = tile_size
-    self.tile_overlap = tile_overlap
     self.tile_format = tile_format
-    self.descriptor = deepzoom.DeepZoomImageDescriptor( width, height, tile_size, tile_overlap, tile_format )
+    self.descriptor = deepzoom.DeepZoomImageDescriptor( width, height, tile_size, 0, tile_format )
     self.versions = {}
   
   def generate_v0( self ):
