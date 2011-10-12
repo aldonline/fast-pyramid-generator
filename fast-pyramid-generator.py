@@ -151,7 +151,6 @@ class Level(object):
     # ( GC considerations, as there will be millions of Tiles )
     return Tile( self, x, y )
 
-
 class Tile(object):
   def __init__( self, level, x, y ):
     self.level = level
@@ -183,13 +182,12 @@ class Tile(object):
         os.symlink( self.source_tile_image_path, self.dest_path )
       
       elif is_version_0 and ( ls_level_m1 or is_level_n ):
-        ptiles = self.parent_tiles
         if self.any_parent_tile_has_changed:
           self.generate_from_parent_tiles()
   
   # parent tiles are the four tiles that, when combined and resized,
   #   create this tile
-  # they are returned as a 4 tuple
+  # they are returned as a list of 4 Tile objects
   # be sure to check if these tiles are within bounds
   @property
   def parent_tiles( self ):
@@ -250,70 +248,13 @@ class Tile(object):
 
 
 ################################################################################
-################################# UTILS #######################################
-################################################################################
-
-def retry(attempts, backoff=2):
-    """Retries a function or method until it returns or
-    the number of attempts has been reached."""
-    if backoff <= 1:
-        raise ValueError('backoff must be greater than 1')
-    attempts = int(math.floor(attempts))
-    if attempts < 0:
-        raise ValueError('attempts must be 0 or greater')
-    def deco_retry(f):
-        def f_retry(*args, **kwargs):
-            last_exception = None
-            for _ in xrange(attempts):
-                try:
-                    return f(*args, **kwargs)
-                except Exception as exception:
-                    last_exception = exception
-                    time.sleep(backoff**(attempts + 1))
-            raise last_exception
-        return f_retry
-    return deco_retry
-
-@retry(6)
-def safe_open(path):
-  return StringIO.StringIO(urllib.urlopen(path).read())
-
-# class DeepZoomImageDescriptor(object): def __init__(self, width=None, height=None, tile_size=254, tile_overlap=1, tile_format='jpg'):
-# descriptor = deepzoom.DeepZoomImageDescriptor( 10000, 10000 )
-# print( descriptor.num_levels )
-
-# size = PIL.Image.open(safe_open('./test_images/checkers/0_0.png')).size
-
-################################################################################
 ################################# MAIN #######################################
 ################################################################################
 
-def links_test():
-  file_path = './sandbox/girls_pyramid/base.jpg'
-  symbolic_link_path = '/tmp/sample_symbolic_link'
-  non_existent_file_path = '/tmp/foobar'
-  print os.lstat(symbolic_link_path)
-  # 1. create a symlink pointing to an existing file
-
-  # trying to stat a non existent file throws error
-
-
-
-
-
 def main():
-  # p = './sandbox/girls_fastpyramid/v0'
-  # images = [ p + '/0_0.png', p + '/1_0.png', p + '/0_1.png', p + '/1_1.png'  ]
-  # images = [ p + '/0_0.png', p + '/1_0.png', None, None  ]
-  # images = [ p + '/4_2.png', p + '/5_2.png', p + '/4_3.png', p + '/5_3.png'  ]
-  # combine4( images, p + '/joined.png' )
-  
-  
   # ./sandbox/girls_fastpyramid 1480, 940
   # ./sandbox/galaxy_fastpyramid 5920, 6000
   # ./sandbox/biggirls_fastpyramid 25000, 16667  
-
-  
   path = './sandbox/biggirls_fastpyramid'
   # cleanup path if already exists
   dest_path = path + '/dest'
@@ -323,5 +264,3 @@ def main():
   fp.generate_v0()
 
 main()
-
-# self.image.resize((width, height), PIL.Image.ANTIALIAS)
