@@ -111,7 +111,6 @@ class Version(object):
     level_nums = range( 3, self.pyramid.descriptor.num_levels )
     level_nums.reverse()
 
-    print 'will generate the following level objects'
     for i in level_nums:
       self.get_level( i ).generate()
 
@@ -180,6 +179,7 @@ class Tile(object):
       
       if is_version_0 and is_level_m:
         # link to source tiles directly
+        # print "LINK: %s --> %s" % ( self.source_tile_image_path, self.dest_path )
         os.symlink( self.source_tile_image_path, self.dest_path )
       
       elif is_version_0 and ( ls_level_m1 or is_level_n ):
@@ -230,7 +230,7 @@ class Tile(object):
 
   @property
   def has_changed_since_last_version(self):
-    assert self.is_generated, 'Cannot check for changes on a Tile that has not been generated'
+    assert self.is_generated, "Cannot check for changes on a Tile that has not been generated: %s" % self.dest_path 
     # if our version is v0, we are always changed
     if self.version.version_number is 0:
       return True
@@ -247,50 +247,6 @@ class Tile(object):
   def generate_from_parent_tiles(self):
     files = [ (tile.dest_path if tile.within_bounds else None ) for tile in self.parent_tiles ]
     combine4( files, self.dest_path )
-
-
-
-class FourLoop(object):
-  def __init__( self, num_cols, num_rows ):
-    self.x = 0 # current cursor
-    self.y = 0 # current cursor
-    self.num_cols = num_cols
-    self.num_rows = num_rows
-    self.max_x = num_cols - 1
-    self.max_y = num_rows - 1
-  
-  def next(self):
-    x = self.x
-    y = self.y
-    
-    if y > self.max_y:
-      return None
-
-    at_right_limit = x is self.max_x
-    at_bottom_limit = y is self.max_y
-    at_any_limit = at_right_limit or at_bottom_limit
-    
-    a = ( x, y ) 
-    b = ( x+1, y ) if not at_right_limit else None # 1, 0
-    c = ( x, y+1 ) if not at_bottom_limit else None # 0, 1
-    d = ( x+1, y+1 ) if not at_any_limit else None # 1, 1
-
-    e = ( x/2, y/2 )
-    
-    # increase cursors for next iteration
-    x += 2
-    if x > self.max_x:
-      y += 2
-      x = 0
-    
-    self.x = x
-    self.y = y
-    
-    return (a, b, c, d, e)
-
-
-
-
 
 
 ################################################################################
@@ -353,12 +309,17 @@ def main():
   # combine4( images, p + '/joined.png' )
   
   
-  path = './sandbox/girls_fastpyramid'
+  # ./sandbox/girls_fastpyramid 1480, 940
+  # ./sandbox/galaxy_fastpyramid 5920, 6000
+  # ./sandbox/biggirls_fastpyramid 25000, 16667  
+
+  
+  path = './sandbox/biggirls_fastpyramid'
   # cleanup path if already exists
   dest_path = path + '/dest'
   if os.path.exists(dest_path): shutil.rmtree( dest_path )
   # generate version zero
-  fp = Pyramid( path, 1480, 940, 254, 0, 'png' )
+  fp = Pyramid( path, 25000, 16667 , 254, 0, 'png' )
   fp.generate_v0()
 
 main()
