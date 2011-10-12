@@ -2,35 +2,49 @@
 
 # Introduction
 
-Deep Zoom images consist of a set of tiles created from a large original image. This set of tiles is also often called a pyramid.
+Deep Zoom images consist of a set of tiles created from a large original image.
+This set of tiles is also often called a pyramid.
 
-There are many formats and viewers, each one with small differences in the image layout format. This particular generator conforms to the DZI ( Microsoft Deep Zoom format ). To learn more visit the [OpenZoom project homepage](http://www.openzoom.org/).
+There are many formats and viewers, each one with small differences in the image layout format.
+This particular generator conforms to the DZI ( Microsoft Deep Zoom format ).
+To learn more visit the [OpenZoom project homepage](http://www.openzoom.org/).
 
-Normal Pyramid generators take one large image as input and produce the tiles and necessary folder structure. This approach is pretty simple to understand and use. However, we needed to radically improve performance and memory consumption and that forced us to look for an alternative strategy.
+Normal Pyramid generators take one large image as input and produce the tiles and necessary folder structure.
+This approach is pretty simple to understand and use.
+However, we needed to radically improve performance and memory consumption and that forced us to look for an alternative strategy.
 
 ## Tweak 1: Pre-Tiling
 
-Instead of starting from the complete original image, this generator expects a set of tiles at the highest resolution level. This is equivalent to taking the original source image you would pass in to a normal generator and creating unscaled first level of tiles by hand.
+Instead of starting from the complete original image,
+this generator expects a set of tiles at the highest resolution level.
+This is equivalent to taking the original source image you would pass in 
+to a normal generator and creating unscaled first level of tiles by hand.
 
 ## Tweak 2: Patches
 
-If you make a change to the image and you need to regenerate the pyramid you will only need to update the modified tile(s) and its ancestors will be re-generated.
+If you make a change to the image and you need to regenerate the pyramid 
+you will only need to update the modified tile(s) and its ancestors will be re-generated.
 
 ## Tweak 3: No Overlap
 
-While in some browsers a tile `overlap = 0` yields some visual artifacts, eliminating the overlap allows us to reduce the generation processing load by about a factor of four, as well as make the algorithm brain-dead simple.
+While in some browsers a tile `overlap = 0` yields some visual artifacts,
+eliminating the overlap allows us to reduce the generation processing load 
+by about a factor of four, as well as make the algorithm brain-dead simple.
 
-Using `overlap >= 1` will be explored soon. It wont' change the user API and folder conventions, just make the generator a bit more complex.
+Using `overlap >= 1` will be explored soon.
+It wont' change the user API and folder conventions,
+just make the generator a bit more complex.
 
-## Result: Faster, cheaper generation
-
-The features referenced above ( pre-tiling, patches and no-overlap ) work together to provide a huge efficiency boost.
+## Tweak 4: OpenCV
 
 # Usage Overview
 
-Imagine you have an image called image1.jpg that measures `750 x 500 pixels`. We want to create a Deep Zoom pyramid with a tile size of 250px.
+Imagine you have an image called image1.jpg that measures `750 x 500 pixels`.
+We want to create a Deep Zoom pyramid with a tile size of 250px.
 
-In a regular pyramid generator you would just pass the image and the tile dimension as input. In this case, we need to provide the base tiles by hand ( while it seems like more work now, the benefits will soon become obvious ).
+In a regular pyramid generator you would just pass the image and the tile dimension as input.
+In this case, we need to provide the base tiles by hand
+( while it seems like more work now, the benefits will soon become obvious ).
 
 ## Provide base tiles by hand
 
@@ -118,7 +132,7 @@ Which will yield the expected result, using links to previously generated images
 
 # Random Notes
 
-* All the *source* data is located in the `./v{x}/` folders. This, you can delete the `./dest/` folder at any time and regenerate from here.
+* All the *source* data is located in the `./v{x}/` folders. Thus, you can delete the `./dest/` folder at any time and regenerate from here.
 * Generating a version will ensure that all previous versions are present.
 * The first generation (v0) is usually the longest because it will need to generate the complete pyramid. Subsequent generations only generate the delta
 
@@ -128,7 +142,21 @@ Not implemented yet. But we should provide a way of eliminating a range of inter
 
 # Efficiently serving over the web
 
-* When serving the images via HTTP, a smart browser could be devised that understands links and generates 303 or 304 HTTP headers. This can help to reduce traffic, specially when dealing with a CDN or some other HTTP-Caching-heavy architecture.
+* When serving the images via HTTP, a smart browser could be devised that understands links and generates 303 or 304 HTTP headers.
+This can help to reduce traffic, specially when dealing with a CDN or some other HTTP-Caching-heavy architecture.
 
+# Benchmarks
+
+
+
+
+
+
+# Etc
+
+
+http://www.vips.ecs.soton.ac.uk/index.php?title=Libvips
+http://www.vips.ecs.soton.ac.uk/index.php?title=Speed_and_Memory_Use
+http://stackoverflow.com/questions/3681496/opencv-macport-python-bindings
 
 
